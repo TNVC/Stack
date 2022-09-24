@@ -1,54 +1,63 @@
 #include <stdio.h>
+#include <stdlib.h>
+
+typedef int Element;
+
 #include "stack.h"
+#include "logging.h"
 
-#include <limits.h>
-
+/// For test
 void copyInt(int *target, const int *source);
-
-void copyInt(int *target, const int *source)
-{
-  *target = *source;
-}
 
 int main()
 {
+  FILE *file = getLogFile();
 
-    printf("%d\n", INT_MAX);
+  Stack stack = {};
 
-    Stack stack = {};
+  stack_dump(&stack, stack_valid(&stack), file);
 
-    stack_dump(&stack, stdout);
+  stack_init(&stack, 2, copyInt);
 
-    stack_init(&stack, 10, copyInt);
-
-    stack_dump(&stack, stdout);
+  stack_dump(&stack, stack_valid(&stack), file);
 
 
-    for (int i = 0; i < 11; ++i)
+  for (int i = 0; i < 10; ++i)
     {
-      int temp = i;
-      if (i == 19)
-        {
-          temp = 1000000;
-        }
+      int temp = (int) (((double)rand())/RAND_MAX * 200000);
 
-        stack_push(&stack, &temp);
+      stack_push(&stack, &temp);
 
-        stack_dump(&stack, stdout);
+      stack_dump(&stack, stack_valid(&stack), file);
     }
 
-    for (int i = 0; i < 11; ++i)
+
+  for (int i = 0; i < 10; ++i)
+    {
+      int temp = (int) 0xDED00DED;
+
+      stack_push(&stack, &temp);
+
+      stack_dump(&stack, stack_valid(&stack), file);
+    }
+
+  for (int i = 0; i < 20; ++i)
     {
       int temp = 0;
 
       stack_pop(&stack, &temp);
 
-      stack_dump(&stack, stdout);
+      stack_dump(&stack, stack_valid(&stack), file);
     }
 
-    stack_destroy(&stack);
+  stack_destroy(&stack);
 
-    stack_dump(&stack, stdout);
+  stack_dump(&stack, stack_valid(&stack), file);
 
-    return 0;
+  return 0;
+}
+
+void copyInt(int *target, const int *source)
+{
+  *target = *source;
 }
