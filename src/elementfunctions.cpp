@@ -33,6 +33,11 @@ int maxElementLength(const int *element)
   return 12;
 }
 
+int getPoison(const int *element)
+{
+  return (int)0xDED00DED;
+}
+
 int isPoison(const int *element)
 {
   return (int)0xDED00DED == *element;

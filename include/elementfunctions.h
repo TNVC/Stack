@@ -17,6 +17,11 @@ int elementLength(const int *element);
 /// @param Max element length
 int maxElementLength(const int *element);
 
+/// Return Poison value for stack
+/// @param [in] element Stack element
+/// @return Poison value
+int getPoison(const int *element);
+
 /// Check that element is poison
 /// @param [in] element Stack element
 /// @return Is element poison

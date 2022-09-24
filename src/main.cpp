@@ -1,8 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-typedef int Element;
-
 #include "stack.h"
 #include "logging.h"
 
@@ -21,8 +18,7 @@ int main()
 
   stack_dump(&stack, stack_valid(&stack), file);
 
-
-  for (int i = 0; i < 10; ++i)
+  for (int i = 0; i < 100; ++i)
     {
       int temp = (int) (((double)rand())/RAND_MAX * 200000);
 
@@ -31,17 +27,7 @@ int main()
       stack_dump(&stack, stack_valid(&stack), file);
     }
 
-
-  for (int i = 0; i < 10; ++i)
-    {
-      int temp = (int) 0xDED00DED;
-
-      stack_push(&stack, &temp);
-
-      stack_dump(&stack, stack_valid(&stack), file);
-    }
-
-  for (int i = 0; i < 20; ++i)
+  for (int i = 0; i < 100; ++i)
     {
       int temp = 0;
 
