@@ -1,12 +1,15 @@
 #include <stdio.h>
 #include "stack.h"
 #include "elementfunctions.h"
+#include "systemlike.h"
 #include "asserts.h"
 
 #define STATUS_BORDER "#---------------------------#------#"
 #define ERRORS_BORDER "#----------------------------------#"
 
 DUMP_LEVEL DUMP_LVL = DUMP_ALL;
+
+#ifndef RELEASE_BUILD_
 
 const int POISON_LENGTH = 6;
 const int PAUSE_LENGTH  = 6;
@@ -15,11 +18,11 @@ int MAX_LENGTH    = 0;
 int MIDDLE_LENGTH = 0;
 
 const char *ERRORS_MESSAGE[] = {
-  "Pointer to stack is NULL",
-  "Stack was destroy without init",
-  "Status is incorrect",
-  "Pointer to stack`s array is NULL",
-  "Capacity less than size",
+  "Pointer to stack is NULL",		// 0
+  "Stack was destroy without init",	// 1
+  "Status is incorrect",		// 2
+  "Pointer to stack`s array is NULL",	// 3
+  "Capacity less than size",		// 4
   "Stack hasn`t a copyFunction",
   "Left canary is died",
   "Right canary is died",
@@ -72,11 +75,15 @@ static void printValues(const Stack *stk, FILE *filePtr);
 /// Print arror for stack array into file
 /// @param [in] stk  Pointer to stack
 /// @param [in] filePtr File for writing
-static void printArror(const Stack *stk, FILE *filePtr);
+static void printArrow(const Stack *stk, FILE *filePtr);
+
+#endif
 
 void do_stack_dump(const Stack *stk, unsigned errorCode, FILE *filePtr,
                    const char *fileName, const char *functionName, int line)
 {
+#ifndef RELEASE_BUILD_
+
   assert(filePtr);
   assert(fileName);
   assert(functionName);
@@ -97,7 +104,7 @@ void do_stack_dump(const Stack *stk, unsigned errorCode, FILE *filePtr,
   if (stk)
     fprintf(filePtr, "\nHash: %u Array hash: %u", stk->hash, stk->arrayHash);
 
-  if (stk && stk->array)
+  if (stk && isPointerCorrect(stk->array))
     {
       MAX_LENGTH    = maxElementLength(&stk->array[0]);
 
@@ -109,6 +116,13 @@ void do_stack_dump(const Stack *stk, unsigned errorCode, FILE *filePtr,
   printErrors(errorCode, filePtr);
 
   printStatus (stk, filePtr);
+
+  if (!stk)
+    {
+      fputc('\n', filePtr);
+
+      return;
+    }
 
   printAddress(stk, filePtr);
 
@@ -122,10 +136,14 @@ void do_stack_dump(const Stack *stk, unsigned errorCode, FILE *filePtr,
 
   printBorder (stk, filePtr);
 
-  printArror  (stk, filePtr);
+  printArrow  (stk, filePtr);
 
   fputc('\n', filePtr);
+
+  #endif
 }
+
+#ifndef RELEASE_BUILD_
 
 static void printErrors(unsigned errorCode, FILE *filePtr)
 {
@@ -169,7 +187,7 @@ static void printStatus(const Stack *stk, FILE *filePtr)
 
 static void printAddress(const Stack *stk, FILE *filePtr)
 {
-  if (!stk->array)
+  if (!isPointerCorrect(stk->array))
     return;
 
   int firstSize = elementLength(&stk->array[0]) < MIDDLE_LENGTH ?
@@ -184,7 +202,7 @@ static void printAddress(const Stack *stk, FILE *filePtr)
 
 static void printBorder(const Stack *stk, FILE *filePtr)
 {
-  if (!stk->array)
+  if (!isPointerCorrect(stk->array))
     return;
 
   int skip = 0;
@@ -203,7 +221,7 @@ static void printBorder(const Stack *stk, FILE *filePtr)
 
       int size = elementLength(&stk->array[i]) < MIDDLE_LENGTH ? MIDDLE_LENGTH : MAX_LENGTH;
 
-      if (isPoison(&stk->array[i]))
+      if (isPoison(&stk->array[i]) && i >= stk->lastElementIndex)
         {
           if (DUMP_LVL == DUMP_NOT_POISON)
             {
@@ -234,7 +252,7 @@ static void printBorder(const Stack *stk, FILE *filePtr)
 
 static void printLine(const Stack *stk, FILE *filePtr)
 {
-  if (!stk->array)
+  if (!isPointerCorrect(stk->array))
     return;
 
   int skip = 0;
@@ -255,7 +273,7 @@ static void printLine(const Stack *stk, FILE *filePtr)
 
       int size = elementLength(&stk->array[i]) < MIDDLE_LENGTH ? MIDDLE_LENGTH : MAX_LENGTH;
 
-      if (isPoison(&stk->array[i]))
+      if (isPoison(&stk->array[i]) && i >= stk->lastElementIndex)
         {
           if (DUMP_LVL == DUMP_NOT_POISON)
             {
@@ -287,7 +305,7 @@ static void printLine(const Stack *stk, FILE *filePtr)
 
 static void printValues(const Stack *stk, FILE *filePtr)
 {
-  if (!stk->array)
+  if (!isPointerCorrect(stk->array))
     return;
 
   int skip = 0;
@@ -305,7 +323,7 @@ static void printValues(const Stack *stk, FILE *filePtr)
 
       int size = elementSize < MIDDLE_LENGTH ? MIDDLE_LENGTH : MAX_LENGTH;
 
-      if (isPoison(&stk->array[i]))
+      if (isPoison(&stk->array[i]) && i >= stk->lastElementIndex)
         {
           if (DUMP_LVL == DUMP_NOT_POISON)
             {
@@ -339,9 +357,9 @@ static void printValues(const Stack *stk, FILE *filePtr)
   fprintf(filePtr, "|\n");
 }
 
-static void printArror(const Stack *stk, FILE *filePtr)
+static void printArrow(const Stack *stk, FILE *filePtr)
 {
-  if (!stk->array || !stk->lastElementIndex)
+  if (!isPointerCorrect(stk->array) || !stk->lastElementIndex)
     return;
 
   fputc('>', filePtr);
@@ -350,7 +368,7 @@ static void printArror(const Stack *stk, FILE *filePtr)
     {
       int size = elementLength(&stk->array[i]) < MIDDLE_LENGTH ? MIDDLE_LENGTH : MAX_LENGTH;
 
-      if (isPoison(&stk->array[i]))
+      if (isPoison(&stk->array[i])  && i >= stk->lastElementIndex)
         size = POISON_LENGTH;
 
       for (int j = 0; j < size + 1; ++j)
@@ -359,11 +377,10 @@ static void printArror(const Stack *stk, FILE *filePtr)
 
   int size = elementLength(&stk->array[stk->lastElementIndex - 1]) < MIDDLE_LENGTH ? MIDDLE_LENGTH : MAX_LENGTH;
 
-  if (isPoison(&stk->array[stk->lastElementIndex - 1]))
-    size = POISON_LENGTH;
-
   for (int j = 0; j < size - 1; ++j)
     fputc('>', filePtr);
 
   fputc('^', filePtr);
 }
+
+#endif

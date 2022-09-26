@@ -1,7 +1,7 @@
-#ifndef RECALLOC_H_
-#define RECALLOC_H_
+#ifndef SYSTEMLIKE_H_
+#define SYSTEMLIKE_H_
 
-#include <stdlib.h>
+#include <stddef.h>
 
 /// Combine realloc and calloc
 /// @param [in] pointer Pointer to dimanic memory which was get from malloc/calloc/realloc/recalloc or else
@@ -9,5 +9,15 @@
 /// @param [in] elementSize Size of one element
 /// @return Pointer to allocate memory or NULL if was error in function
 void *recalloc(void *pointer, size_t elements, size_t elementSize);
+
+/// Check that address is corrrect
+/// @param [in] pointer Pointer for chaeck
+/// @return Is pointer correct
+int isPointerCorrect(const void *pointer);
+
+/// Get file size
+/// @param [in] filename Name of file
+/// @return Size of file with name filename
+size_t getFileSize(const char *filename);
 
 #endif

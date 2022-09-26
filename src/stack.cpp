@@ -3,33 +3,28 @@
 #include "hash.h"
 #include "asserts.h"
 #include "elementfunctions.h"
-#include "recalloc.h"
+#include "systemlike.h"
 #include "logging.h"
 
 #pragma GCC diagnostic ignored "-Wcast-qual"
 
 #ifndef RELEASE_BUILD_
 
-#define CHECK_VALID(STACK_POINTER)                          \
-  do                                                        \
-    {                                                       \
-      unsigned error = stack_valid(STACK_POINTER);          \
-                                                            \
-      if (error)                                            \
-        {                                                   \
-          stack_dump(STACK_POINTER, error, getLogFile());   \
-                                                            \
-          printf("CHECK_VALID ERROR: %u\n", error);         \
-                                                            \
-          exit(1);                                          \
-        }                                                   \
+#define CHECK_VALID(STACK_POINTER, ERROR, ...)                          \
+  do                                                                    \
+    {                                                                   \
+      unsigned ERROR_CODE_TEMP = stack_valid(STACK_POINTER);            \
+                                                                        \
+      if (ERROR_CODE_TEMP)                                              \
+        {                                                               \
+          stack_dump(STACK_POINTER, ERROR_CODE_TEMP, getLogFile());     \
+                                                                        \
+          if (ERROR)                                                    \
+            *ERROR = ERROR_CODE_TEMP;                                   \
+                                                                        \
+          return __VA_ARGS__;                                           \
+        }                                                               \
     } while (0)
-
-#else
-
-#define CHECK_VALID(STACK_POINTER) ;
-
-#endif
 
 #define UPDATE_HASH(STACK_POINTER)                                      \
   do                                                                    \
@@ -41,6 +36,14 @@
       STACK_POINTER->hash = getHash(STACK_POINTER, sizeof(Stack));      \
     } while(0)
 
+#else
+
+#define CHECK_VALID(STACK_POINTER, ERROR, ...) ;
+
+#define UPDATE_HASH(STACK_POINTER) ;
+
+#endif
+
 #define LEFT_CANARY        0xDEADBEAF
 #define RIGHT_CANARY       0xBADC0FEE
 #define LEFT_ARRAY_CANARY  0xBEADFACE
@@ -50,9 +53,13 @@ const size_t DEFAULT_STACK_GROWTH = 2;
 const size_t DEFAULT_STACK_OFFSET = 5;
 
 
-unsigned stack_valid(const Stack *stack)
+unsigned stack_valid(const Stack *stk)
 {
-  Stack *stk = (Stack *)stack;
+#ifdef RELEASE_BUILD_
+
+  return 0;
+
+#endif
 
   if (!stk)
     return NULL_STACK_POINTER;
@@ -74,13 +81,15 @@ unsigned stack_valid(const Stack *stack)
   if (!stk->copyFunction)
     error |= NOT_COPYFUNCTION;
 
+#ifndef RELEASE_BUILD_
+
   if (stk->leftCanary != LEFT_CANARY)
     error |= LEFT_CANARY_DIED;
 
   if (stk->rightCanary != RIGHT_CANARY)
     error |= RIGHT_CANARY_DIED;
 
-  if (stk->array)
+  if (stk->array && isPointerCorrect(stk->array))
     {
       if (*(CANARY *)((char *)stk->array - sizeof(CANARY)) != LEFT_ARRAY_CANARY)
         error |= LEFT_ARRAY_CANARY_DIED;
@@ -113,11 +122,14 @@ unsigned stack_valid(const Stack *stack)
   if (stk->info.line <= 0)
     error |= INCORRECT_LINE;
 
+#endif
+
   return error;
 }
 
-int do_stack_init(Stack *stk, size_t capacity, void (*copyFunction)(Element *, const Element *),
-                  const char *name, const char *fileName, const char *functionName, int line)
+void do_stack_init(Stack *stk, size_t capacity, void (*copyFunction)(Element *, const Element *),
+                  const char *name, const char *fileName, const char *functionName, int line,
+                  unsigned *error)
 {
     assert(stk);
     assert(copyFunction);
@@ -128,50 +140,78 @@ int do_stack_init(Stack *stk, size_t capacity, void (*copyFunction)(Element *, c
 
     assert(!(stk->status & INIT));
 
+#ifndef RELEASE_BUILD_
+
     stk->leftCanary  = LEFT_CANARY;
     stk->rightCanary = RIGHT_CANARY;
+
+#endif
 
     stk->capacity         = capacity;
     stk->lastElementIndex = 0;
     stk->status           = INIT | EMPTY;
     stk->copyFunction     = copyFunction;
 
+#ifndef RELEASE_BUILD_
+
     stk->info.name             = name;
     stk->info.fileName         = fileName;
     stk->info.functionName     = functionName;
     stk->info.line             = line;
 
+#endif
+
     if (capacity == 0)
         stk->array = nullptr;
     else
       {
-        stk->array = (Element *) calloc(1, capacity*sizeof(Element) + 2*sizeof(CANARY));
+#ifndef RELEASE_BUILD_
 
+        stk->array = (Element *) calloc(1, capacity*sizeof(Element) + 2*sizeof(CANARY));
+#else
+
+        stk->array = (Element *) calloc(1, capacity*sizeof(Element));
+
+#endif
         if (stk->array == nullptr)
-            return 1;
+          {
+            if (isPointerCorrect(error))
+              *error = 1;
+
+            return;
+          }
+
+#ifndef RELEASE_BUILD_
 
         *(CANARY *)stk->array = LEFT_ARRAY_CANARY;
 
         stk->array = (Element *)((char *)stk->array + sizeof(CANARY));
 
         *(CANARY *)(stk->array + capacity) = RIGHT_ARRAY_CANARY;
+
+#endif
       }
 
     UPDATE_HASH(stk);
 
-    CHECK_VALID(stk);
-
-    return 0;
+    CHECK_VALID(stk, error);
 }
 
-void stack_destroy(Stack *stk)
+void stack_destroy(Stack *stk, unsigned *error)
 {
-  CHECK_VALID(stk);
+  CHECK_VALID(stk, error);
 
   assert(stk->status & INIT);
 
+#ifndef RELEASE_BUILD_
+
   free((char *)stk->array - sizeof(CANARY));
 
+#else
+
+  free(stk->array);
+
+#endif
   stk->array = nullptr;
 
   stk->capacity         = 0;
@@ -184,20 +224,9 @@ void stack_destroy(Stack *stk)
   UPDATE_HASH(stk);
 }
 
-void stack_clean(Stack *stk)
+void stack_push(Stack *stk, const Element *element, unsigned *error)
 {
-  CHECK_VALID(stk);
-
-  assert(stk->status & DESTROY);
-
-  stk->status = 0x00;
-
-  CHECK_VALID(stk);
-}
-
-int stack_push(Stack *stk, const Element *element)
-{
-  CHECK_VALID(stk);
+  CHECK_VALID(stk, error);
 
   assert(element != nullptr);
 
@@ -210,7 +239,10 @@ int stack_push(Stack *stk, const Element *element)
           stk->capacity         = 0;
           stk->lastElementIndex = 0;
 
-          return 1;
+          if (isPointerCorrect(error))
+            *error = 1;
+
+          return;
         }
     }
 
@@ -220,19 +252,22 @@ int stack_push(Stack *stk, const Element *element)
 
   UPDATE_HASH(stk);
 
-  CHECK_VALID(stk);
-
-  return 0;
+  CHECK_VALID(stk, error);
 }
 
-int stack_pop(Stack *stk, Element *element)
+void stack_pop(Stack *stk, Element *element, unsigned *error)
 {
-  CHECK_VALID(stk);
+  CHECK_VALID(stk, error);
 
   assert(element != nullptr);
 
   if (stk->status & EMPTY)
-    return 1;
+    {
+      if (isPointerCorrect(error))
+        *error = 1;
+
+      return;
+    }
 
   stk->copyFunction(element, &stk->array[--(stk->lastElementIndex)]);
 
@@ -250,29 +285,40 @@ int stack_pop(Stack *stk, Element *element)
           stk->capacity         = 0;
           stk->lastElementIndex = 0;
 
-          return 1;
+          if (isPointerCorrect(error))
+            *error = 1;
+
+          return;
         }
     }
 
   UPDATE_HASH(stk);
 
-  CHECK_VALID(stk);
-
-  return 0;
+  CHECK_VALID(stk, error);
 }
 
-void stack_resize(Stack *stk, size_t newSize)
+void stack_resize(Stack *stk, size_t newSize, unsigned *error)
 {
-  CHECK_VALID(stk);
+  CHECK_VALID(stk, error);
 
   if (newSize)
     {
+#ifndef RELEASE_BUILD_
+
       stk->array = (Element *)((char *)stk->array - sizeof(CANARY));
 
       stk->array = (Element *) recalloc(stk->array, 1,  newSize*sizeof(Element) + 2*sizeof(CANARY));
 
+#else
+
+      stk->array = (Element *) recalloc(stk->array, 1, newSize*sizeof(Element));
+
+#endif
+
       if (stk->array != nullptr)
         {
+#ifndef RELEASE_BUILD_
+
           stk->array = (Element *)((char *)stk->array + sizeof(CANARY));
 
           *(CANARY *)(stk->array + newSize) = RIGHT_ARRAY_CANARY;
@@ -284,33 +330,58 @@ void stack_resize(Stack *stk, size_t newSize)
               for (size_t i = newSize - stk->capacity; i < newSize; ++ i)
                 stk->copyFunction(&stk->array[i], &poison);
             }
+
+#endif
         }
+      else
+        {
+          if (isPointerCorrect(error))
+            *error = 1;
+
+          return;
+        }
+    }
+  else
+    {
+#ifndef RELEASE_BUILD_
+
+      stk->array = (Element *)((char *)stk->array - sizeof(CANARY));
+
+      free(stk->array);
+
+#else
+
+      free(stk->array);
+
+#endif
+
+      stk->array = nullptr;
     }
 
   stk->capacity = newSize;
 
   UPDATE_HASH(stk);
 
-  CHECK_VALID(stk);
+  CHECK_VALID(stk, error);
 }
 
-size_t stack_size(const Stack *stk)
+size_t stack_size(const Stack *stk, unsigned *error)
 {
-  CHECK_VALID(stk);
+  CHECK_VALID(stk, error, -1u);
 
   return stk->lastElementIndex + 1;
 }
 
-size_t stack_capacity(const Stack *stk)
+size_t stack_capacity(const Stack *stk, unsigned *error)
 {
-  CHECK_VALID(stk);
+  CHECK_VALID(stk, error, -1u);
 
   return stk->capacity;
 }
 
-int stack_isEmpty(const Stack *stk)
+int stack_isEmpty(const Stack *stk, unsigned *error)
 {
-  CHECK_VALID(stk);
+  CHECK_VALID(stk, error, 0);
 
   return stk->status & EMPTY;
 }

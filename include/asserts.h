@@ -1,4 +1,4 @@
-#ifndef ASSERTS_H_
+#if not defined ASSERTS_H && not defined RELEASE_BUILD__
 #define ASSERTS_H_
 
 #include <stdio.h>

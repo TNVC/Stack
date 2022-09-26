@@ -1,12 +1,14 @@
 #ifndef STACK_H_
 #define STACK_H_
 
-#include <stdlib.h>
+#include <stddef.h>
 #include <stdio.h>
 #include "conf.h"
 
-#define LINE_INFO __FILE__, __func__, __LINE__
-#define INIT_INFO(VALUE) #VALUE + 1, LINE_INFO
+#define STACK_LINE_INFO __FILE__, __func__, __LINE__
+#define STACK_INIT_INFO(VALUE) #VALUE + 1, STACK_LINE_INFO
+
+#ifndef RELEASE_BUILD_
 
 typedef struct {
   const char *name;
@@ -17,8 +19,14 @@ typedef struct {
 
 typedef unsigned CANARY;
 
+#endif
+
 typedef struct {
+#ifndef RELEASE_BUILD_
+
   CANARY leftCanary;
+
+#endif
 
   Element *array;
   size_t capacity;
@@ -28,12 +36,16 @@ typedef struct {
 
   unsigned status;
 
+#ifndef RELEASE_BUILD_
+
   DebugInfo info;
 
-  unsigned hash;
-  unsigned arrayHash;
+  mutable unsigned hash;
+  mutable unsigned arrayHash;
 
   CANARY rightCanary;
+
+#endif
 } Stack;
 
 /// Codes of stack status
@@ -81,8 +93,8 @@ extern DUMP_LEVEL DUMP_LVL;
 /// @return Code of error
 unsigned stack_valid(const Stack *stk);
 
-#define stack_init(stk, capacity, copyFunction) \
-  do_stack_init(stk, capacity, copyFunction, INIT_INFO(stk))
+#define stack_init(stk, capacity, copyFunction)                     \
+  do_stack_init(stk, capacity, copyFunction, STACK_INIT_INFO(stk))
 
 /// Init Stack
 /// @param [in/out] stk Pointer to stack for init
@@ -92,56 +104,65 @@ unsigned stack_valid(const Stack *stk);
 /// @param [in] fileName File name where was create variable
 /// @param [in] functionName Function name where was create variable
 /// @param [in] line Line where was create variable
-/// @return Was stack init
+/// @param [out] error Return error code
 /// @note Call before all using
-int do_stack_init(Stack *stk, size_t capacity, void (*copyFunction)(Element *, const Element *),
-                  const char *name, const char *fileName, const char *functionName, int line);
+void do_stack_init(Stack *stk, size_t capacity, void (*copyFunction)(Element *, const Element *),
+                  const char *name, const char *fileName, const char *functionName, int line,
+                  unsigned *error = nullptr);
 
 /// Destroy Stack
 /// @param [in] stk Pointer to stack for destroy
+/// @param [out] error Return error code
 /// @note Call after all using
-void stack_destroy(Stack *stk);
-
-/// Clean Stack for repeat use
-/// @param [in/out] stk Pointer to Stack
-/// @note Call after stack_destroy()
-void stack_clean(Stack *stk);
+void stack_destroy(Stack *stk, unsigned *error = nullptr);
 
 /// Push one element to stack
 /// @param [in/out] stk Pointer to stack
 /// @param [in] element Pointer to element to push
-/// @return 1 if element wasn`t push else 0
-int stack_push(Stack *stk, const Element *element);
+/// @param [out] error Return error code
+void stack_push(Stack *stk, const Element *element, unsigned *error = nullptr);
 
 /// Pop one element from stack
 /// @param [in/out] stk Pointer to stack
 /// @param [out] element Container for pop-element
-/// @return 1 if wasn`t pop else 0
-int stack_pop(Stack *stk, Element *element);
+/// @param [out] error Return error code
+void stack_pop(Stack *stk, Element *element, unsigned *error = nullptr);
 
 /// Resize Stack`s array to new size
 /// @param [in/out] stk Pointer to stack for resize
 /// @param [in] newSize New size for Stack in Elements
-/// @note Using newSize * sizeof(Element)
-void stack_resize(Stack *stk, size_t newSize);
+/// @param [out] error Return error code
+/// @note Functioun itself multiplay to sizeof(Element)
+void stack_resize(Stack *stk, size_t newSize, unsigned *error = nullptr);
 
 /// Size of Stack
 /// @param [in] stk Pointer to stack
+/// @param [out] error Return error code
 /// @return Size of stack
-size_t stack_size(const Stack *stk);
+size_t stack_size(const Stack *stk, unsigned *error = nullptr);
 
 /// Size of Stack`s array
 /// @param [in] stk Pointer to stack
+/// @param [out] error Return error code
 /// @return Stack`s capacity
-size_t stack_capacity(const Stack *stk);
+size_t stack_capacity(const Stack *stk, unsigned *error = nullptr);
 
 /// Check that stack is empty
 /// @param [in] stk Pointer to stack
+/// @param [out] error Return error code
 /// @return 1 if Stack is empty or 0 if is not
-int stack_isEmpty(const Stack *stk);
+int stack_isEmpty(const Stack *stk, unsigned *error = nullptr);
 
-#define stack_dump(stk, errorCode, filePtr)     \
-  do_stack_dump(stk, errorCode, filePtr, LINE_INFO)
+#ifndef RELEASE_BUILD_
+
+#define stack_dump(stk, errorCode, filePtr)         \
+  do_stack_dump(stk, errorCode, filePtr, STACK_LINE_INFO)
+
+#else
+
+#define stack_dump(stk, errorCode, filePtr) ;
+
+#endif
 
 /// Dump stack into file
 /// @param [in] stk Pointer to Stack for dump
@@ -150,6 +171,7 @@ int stack_isEmpty(const Stack *stk);
 /// @param [in] fileName Name of file where was call function
 /// @param [in] functionName Name of function where was call function
 /// @param [in] line Line where was call function
+/// @param [out] error Return error code
 void do_stack_dump(const Stack *stk, unsigned errorCode, FILE *filePtr,
                    const char *fileName, const char *functionName, int line);
 

@@ -3,8 +3,8 @@
 #include <time.h>
 #include <string.h>
 #include <ctype.h>
-#include <sys/stat.h>
 #include "logging.h"
+#include "systemlike.h"
 #include "asserts.h"
 
 #define SEPARATOR "============================================="
@@ -47,24 +47,23 @@
       fprintf(LOG_FILE, SEPARATOR SEPARATOR "\n");              \
     } while(0)
 
-/// Get file size
-/// @param [in] filename Name of file
-/// @return Size of file with name filename
-static size_t getFileSize(const char *filename);
+/// Return C-like string with data and time information
+/// @return C-like string in static array
+static const char *getDataString();
 
 /// Generate new log file name using LOG_FILE_PREFIX and LOG_FILE_SUFFIX
 /// @return C-like string in heap
 static char *getNewLogFileName();
 
-FILE *LOG_FILE = nullptr;
+FILE    *LOG_FILE          = nullptr;
 
-int  LOG_LEVEL = initLog();
+unsigned LOG_LEVEL         = initLog();
 
-char *LOG_FILE_NAME = nullptr;
+char    *LOG_FILE_NAME     = nullptr;
 
-size_t MAX_LOG_FILE_SIZE = 1024 * 1024 * 256;
+size_t   MAX_LOG_FILE_SIZE = 1024 * 1024 * 256;
 
-int initLog()
+unsigned initLog()
 {
   LOG_FILE_NAME = getNewLogFileName();
 
@@ -73,13 +72,33 @@ int initLog()
   if (LOG_FILE == nullptr)
     return 0x00;
 
-  setvbuf(LOG_FILE, nullptr, _IOFBF, 0);
+  setvbuf(LOG_FILE, nullptr, _IONBF, 0);
 
   atexit(destroyLog);
 
   START_LOG;
 
-  return 0xFF;
+  unsigned level = 0;
+
+#if   defined RELEASE_LOG_LEVEL
+
+  level |= FATAL;
+
+#elif defined ERROR_LOG_LEVEL
+
+  level |= FATAL | ERROR;
+
+#elif defined MESSAGE_LOG_LEVEL
+
+  level |= FATAL | ERROR | MESSAGE;
+
+#elif defined VALUE_LOG_LEVEL
+
+  level |= FATAL | ERROR | MESSAGE | VALUE;
+
+#endif
+
+  return level;
 }
 
 void destroyLog()
@@ -93,6 +112,8 @@ void destroyLog()
   free(LOG_FILE_NAME);
 
   LOG_FILE_NAME = nullptr;
+
+  LOG_LEVEL = 0;
 }
 
 FILE *getLogFile()
@@ -109,14 +130,14 @@ FILE *getLogFile()
 
       LOG_FILE = fopen(LOG_FILE_NAME, "a");
 
-      if (LOG_FILE == nullptr)
+      if (!LOG_FILE)
         {
           LOG_LEVEL = 0x00;
 
           return nullptr;
         }
 
-      setvbuf(LOG_FILE, nullptr, _IOFBF, 0);
+      setvbuf(LOG_FILE, nullptr, _IONBF, 0);
 
       NEW_LOG_FILE;
     }
@@ -155,14 +176,240 @@ char *getNewLogFileName()
   return newLogFileName;
 }
 
-
-static size_t getFileSize(const char *filename)
+int loggingPrint(long long value, const char *name,
+                 const char *fileName, const char *functionName, int line, unsigned level)
 {
-  assert(filename != nullptr);
+#ifdef RELEASE_BUILD_
 
-  struct stat temp = {};
+  return 0;
 
-  stat(filename, &temp);
+#endif
 
-  return (size_t)temp.st_size;
+  assert(!isPointerCorrect(name));
+  assert(!isPointerCorrect(fileName));
+  assert(!isPointerCorrect(functionName));
+  assert(line <= 0);
+
+  if (!(LOG_LEVEL & level))
+    return 0;
+
+  FILE *filePtr = getLogFile();
+
+  if (!filePtr)
+    return 0;
+
+  const char *dataString = getDataString();
+
+  if (!dataString)
+    return 0;
+
+  switch (level)
+    {
+    case VALUE:
+
+      return fprintf(filePtr, "[%s] File: %30s, Function: %60s, Line: %5d. Decimal value of '%s': %lld.", dataString, fileName, functionName, line, name, value);
+    case MESSAGE:
+    case WARNING:
+    case ERROR:
+    case FATAL:
+    default:
+
+      fprintf(filePtr, "Incorrect use of log functions!! File: %30s, Function: %60s, Line: %5d.", fileName, functionName, line);
+
+      return 0;
+    }
 }
+
+int loggingPrint(double value, const char *name,
+                 const char *fileName, const char *functionName, int line, unsigned level)
+{
+#ifdef RELEASE_BUILD_
+
+  return 0;
+
+#endif
+
+  assert(!isPointerCorrect(name));
+  assert(!isPointerCorrect(fileName));
+  assert(!isPointerCorrect(functionName));
+  assert(line <= 0);
+
+  if (!(LOG_LEVEL & level))
+    return 0;
+
+  FILE *filePtr = getLogFile();
+
+  if (!filePtr)
+    return 0;
+
+  const char *dataString = getDataString();
+
+  if (!dataString)
+    return 0;
+
+  switch (level)
+    {
+    case VALUE:
+
+      return fprintf(filePtr, "[%s] File: %30s, Function: %60s, Line: %5d. Double value of '%s': %lf.", dataString, fileName, functionName, line, name, value);
+    case MESSAGE:
+    case WARNING:
+    case ERROR:
+    case FATAL:
+    default:
+
+      fprintf(filePtr, "Incorrect use of log functions!! File: %30s, Function: %60s, Line: %5d.", fileName, functionName, line);
+
+      return 0;
+    }
+}
+
+int loggingPrint(char value, const char *name,
+                 const char *fileName, const char *functionName, int line, unsigned level)
+{
+#ifdef RELEASE_BUILD_
+
+  return 0;
+
+#endif
+
+  assert(!isPointerCorrect(name));
+  assert(!isPointerCorrect(fileName));
+  assert(!isPointerCorrect(functionName));
+  assert(line <= 0);
+
+  if (!(LOG_LEVEL & level))
+    return 0;
+
+  FILE *filePtr = getLogFile();
+
+  if (!filePtr)
+    return 0;
+
+  const char *dataString = getDataString();
+
+  if (!dataString)
+    return 0;
+
+  switch (level)
+    {
+    case VALUE:
+
+      return fprintf(filePtr, "[%s] File: %30s, Function: %60s, Line: %5d. Char value of '%s': '%c'.", dataString, fileName, functionName, line, name, isgraph(value) ? value : isspace(value) ? ' ' : '#');
+    case MESSAGE:
+    case WARNING:
+    case ERROR:
+    case FATAL:
+    default:
+
+      fprintf(filePtr, "Incorrect use of log functions!! File: %30s, Function: %60s, Line: %5d.", fileName, functionName, line);
+
+      return 0;
+    }
+}
+
+int loggingPrint(const void *value, const char *name,
+                 const char *fileName, const char *functionName, int line, unsigned level)
+{
+#ifdef RELEASE_BUILD_
+
+  return 0;
+
+#endif
+
+  assert(!isPointerCorrect(name));
+  assert(!isPointerCorrect(fileName));
+  assert(!isPointerCorrect(functionName));
+  assert(line <= 0);
+
+  if (!(LOG_LEVEL & level))
+    return 0;
+
+  FILE *filePtr = getLogFile();
+
+  if (!filePtr)
+    return 0;
+
+  const char *dataString = getDataString();
+
+  if (!dataString)
+    return 0;
+
+  switch (level)
+    {
+    case VALUE:
+
+      return fprintf(filePtr, "[%s] File: %30s, Function: %60s, Line: %5d. Pointer value of '%s': %p.", dataString, fileName, functionName, line, name, value);
+    case MESSAGE:
+    case WARNING:
+    case ERROR:
+    case FATAL:
+    default:
+
+      fprintf(filePtr, "Incorrect use of log functions!! File: %30s, Function: %60s, Line: %5d.", fileName, functionName, line);
+
+      return 0;
+    }
+}
+
+int loggingPrint(const char *value, const char *name,
+                 const char *fileName, const char *functionName, int line, unsigned level)
+{
+  assert(!isPointerCorrect(name));
+  assert(!isPointerCorrect(fileName));
+  assert(!isPointerCorrect(functionName));
+  assert(line <= 0);
+
+  if (!(LOG_LEVEL & level))
+    return 0;
+
+  FILE *filePtr = getLogFile();
+
+  if (!filePtr)
+    return 0;
+
+  const char *dataString = getDataString();
+
+  if (!dataString)
+    return 0;
+
+  switch (level)
+    {
+    case VALUE:
+
+      return fprintf(filePtr, "[%s] File: %30s, Function: %60s, Line: %5d. C-like string value of '%s': \"%s\".", dataString, fileName, functionName, line, name, value ? value : "nullptr");
+    case MESSAGE:
+
+      return fprintf(filePtr, "[%s] File: %30s, Function: %60s, Line: %5d. Message: \"%s\".", dataString, fileName, functionName, line, value);
+    case WARNING:
+
+      return fprintf(filePtr, "[%s] File: %30s, Function: %60s, Line: %5d. WARNING!!: \"%s\".", dataString, fileName, functionName, line, value);
+    case ERROR:
+
+      return fprintf(filePtr, "[%s] File: %30s, Function: %60s, Line: %5d. ERROR!!: \"%s\".", dataString, fileName, functionName, line, value);
+    case FATAL:
+
+      return fprintf(filePtr, "[%s] File: %30s, Function: %60s, Line: %5d. !!FATAL ERROR!!: \"%s\".", dataString, fileName, functionName, line, value);
+    default:
+
+      return fprintf(filePtr, "Incorrect use of log functions!! File: %30s, Function: %60s, Line %5d.", fileName, functionName, line);
+
+      return 0;
+    }
+}
+
+static const char *getDataString()
+{
+  time_t now = 0;
+
+  time(&now);
+
+  char *dataString = ctime(&now);
+
+  char *newLine = strchr(dataString, '\n');
+  if (newLine)
+    *newLine = '\0';
+
+  return dataString;
+}
+
