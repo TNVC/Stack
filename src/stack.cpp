@@ -86,7 +86,7 @@ unsigned stack_valid(const Stack *stk)
   if (stk->rightCanary != RIGHT_CANARY)
     error |= RIGHT_CANARY_DIED;
 
-  if (isPointerCorrect(stk->array))
+  if (stk->array)
     {
       if (*(CANARY *)((char *)stk->array - sizeof(CANARY)) != LEFT_ARRAY_CANARY)
         error |= LEFT_ARRAY_CANARY_DIED;

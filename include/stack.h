@@ -1,14 +1,12 @@
 #ifndef STACK_H_
 #define STACK_H_
 
-#include <stddef.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include "conf.h"
 
-#define STACK_LINE_INFO __FILE__, __func__, __LINE__
-#define STACK_INIT_INFO(VALUE) #VALUE + 1, STACK_LINE_INFO
-
-#ifndef RELEASE_BUILD_
+#define LINE_INFO __FILE__, __func__, __LINE__
+#define INIT_INFO(VALUE) #VALUE + 1, LINE_INFO
 
 typedef struct {
   const char *name;
@@ -18,8 +16,6 @@ typedef struct {
 } DebugInfo;
 
 typedef unsigned CANARY;
-
-#endif
 
 typedef struct {
 #ifndef RELEASE_BUILD_
@@ -40,12 +36,12 @@ typedef struct {
 
   DebugInfo info;
 
-  mutable unsigned hash;
-  mutable unsigned arrayHash;
+  unsigned hash;
+  unsigned arrayHash;
 
   CANARY rightCanary;
 
-#endif
+#enif
 } Stack;
 
 /// Codes of stack status
@@ -93,8 +89,8 @@ extern DUMP_LEVEL DUMP_LVL;
 /// @return Code of error
 unsigned stack_valid(const Stack *stk);
 
-#define stack_init(stk, capacity, copyFunction)                     \
-  do_stack_init(stk, capacity, copyFunction, STACK_INIT_INFO(stk))
+#define stack_init(stk, capacity, copyFunction, ...)          \
+  do_stack_init(stk, capacity, copyFunction, INIT_INFO(stk) ERROR(, __VA_ARGS__))
 
 /// Init Stack
 /// @param [in/out] stk Pointer to stack for init
@@ -155,12 +151,12 @@ int stack_isEmpty(const Stack *stk, unsigned *error = nullptr);
 
 #ifndef RELEASE_BUILD_
 
-#define stack_dump(stk, errorCode, filePtr)         \
-  do_stack_dump(stk, errorCode, filePtr, STACK_LINE_INFO)
+#define stack_dump(stk, errorCode, filePtr)     \
+  do_stack_dump(stk, errorCode, filePtr, LINE_INFO)
 
 #else
 
-#define stack_dump(stk, errorCode, filePtr) ;
+#define stack_dump(stk, errorCode, filePtr) ; 
 
 #endif
 
