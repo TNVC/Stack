@@ -9,17 +9,11 @@
 
 #define LOG_INFO(EXPRESSION) #EXPRESSION, __FILE__, __func__, __LINE__
 
-#ifndef LOG_DIRECTORY
-#define LOG_DIRECTORY "log/"
-#endif
+#define LOG_DIRECTORY ".log/"
 
-#ifndef LOG_FILE_PREFIX
 #define LOG_FILE_PREFIX "log"
-#endif
 
-#ifndef LOG_FILE_SUFFIX
 #define LOG_FILE_SUFFIX "txt"
-#endif
 
 unsigned enum LogLevel {
   FATAL   = (0x01 << 0),
@@ -28,8 +22,6 @@ unsigned enum LogLevel {
   MESSAGE = (0x01 << 3),
   VALUE   = (0x01 << 4),
 };
-
-extern unsigned LOG_LEVEL;
 
 /// Init logs
 /// @note Autocallable

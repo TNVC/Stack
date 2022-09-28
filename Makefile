@@ -12,35 +12,38 @@ OBJDIR := objects
 INCDIR := include
 DEPDIR := dependences
 
-SOURCES 		:= $(wildcard $(addsuffix /*.cpp, $(SRCDIR)) )
-OBJECTS     := $(patsubst %.cpp, $(OBJDIR)/%.o, $(notdir $(SOURCES)) )
-DEPENDENCES := $(patsubst %.cpp, $(DEPDIR)/%.d, $(notdir $(SOURCES)) )
+SOURCES 		:= $(wildcard $(addsuffix /*.cpp, $(if $(SRCDIR), $(SRCDIR), .)) )
+OBJECTS     := $(patsubst %.cpp, $(if $(OBJDIR), $(OBJDIR)/%.o, ./%.o), $(notdir $(SOURCES)) )
+DEPENDENCES := $(patsubst %.cpp, $(if $(DEPDIR), $(DEPDIR)/%.d, ./%.d), $(notdir $(SOURCES)) )
 
 VPATH := $(SRCDIR)
 
-.PHONY: clean run  dependences cleanDependences makeDependencesDir
+.PHONY: clean run  dependences cleanDependences makeDependencesDir objects print
 
-$(NAME): dependences $(OBJECTS) cleanDependences
-	@$(CC) $(LFLAGS) $(OBJECTS) -o $@ 2>$(LOGFILE)
+$(NAME):  dependences objects $(OBJECTS) cleanDependences
+	@$(if $(OBJECTS), $(CC) $(LFLAGS) $(OBJECTS) -o $@ 2>$(LOGFILE))
 
 clean:
-	@rm -rf $(OBJECTS) $(DEPDIR) $(NAME)
+	@rm -rf $(OBJECTS) $(DEPENDENCES) $(DEPDIR) $(NAME)
 
 run: clean $(NAME)
-	@./$(NAME) $(ARGS)
+	@$(if $(NAME), ./$(NAME) $(ARGS))
 
 dependences: makeDependencesDir $(DEPENDENCES)
 
 makeDependencesDir:
-	@mkdir -p $(DEPDIR)
+	@$(if $(DEPDIR), mkdir -p $(DEPDIR))
 
-$(DEPDIR)/%.d: %.cpp
+$(if $(DEPDIR), $(DEPDIR)/%.d, %.d): %.cpp
 	@$(CC) -M $(addprefix -I, $(INCDIR)) $< -o $@ 2>$(LOGFILE)
 
 cleanDependences:
-	@rm -rf $(DEPDIR)
+	@rm -rf $(DEPENDENCES) $(DEPDIR)
 
-$(OBJDIR)/%.o: %.cpp
+objects:
+	@$(if $(OBJDIR), mkdir -p $(OBJDIR))
+
+$(if $(OBJDIR), $(OBJDIR)/%.o, %.o): %.cpp
 	@$(CC) -c $(addprefix -I, $(INCDIR)) $(CFLAGS) $< -o $@ 2>$(LOGFILE)
 
 include $(wildcard $(DEPDIR)/*.d)

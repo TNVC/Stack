@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include "stack.h"
 #include "hash.h"
-#include "asserts.h"
 #include "elementfunctions.h"
 #include "systemlike.h"
 #include "logging.h"
@@ -59,9 +58,9 @@ unsigned stack_valid(const Stack *stk)
 
   return 0;
 
-#endif
+#else
 
-  if (!stk)
+  if (!isPointerCorrect(stk))
     return NULL_STACK_POINTER;
 
   unsigned error = 0;
@@ -72,16 +71,14 @@ unsigned stack_valid(const Stack *stk)
   if ((stk->status & EMPTY) && !(stk->lastElementIndex + 1))
     error |= INCORRECT_STATUS;
 
-  if (!stk->array && stk->capacity)
+  if (!isPointerCorrect(stk->array) && stk->capacity)
     error |= NULL_ARRAY_POINTER;
 
   if (stk->capacity < stk->lastElementIndex)
     error |= CAPACITY_LESS_THAN_SIZE;
 
-  if (!stk->copyFunction)
+  if (!isPointerCorrect((void *)stk->copyFunction))
     error |= NOT_COPYFUNCTION;
-
-#ifndef RELEASE_BUILD_
 
   if (stk->leftCanary != LEFT_CANARY)
     error |= LEFT_CANARY_DIED;
@@ -89,7 +86,7 @@ unsigned stack_valid(const Stack *stk)
   if (stk->rightCanary != RIGHT_CANARY)
     error |= RIGHT_CANARY_DIED;
 
-  if (stk->array && isPointerCorrect(stk->array))
+  if (isPointerCorrect(stk->array))
     {
       if (*(CANARY *)((char *)stk->array - sizeof(CANARY)) != LEFT_ARRAY_CANARY)
         error |= LEFT_ARRAY_CANARY_DIED;
@@ -110,35 +107,34 @@ unsigned stack_valid(const Stack *stk)
 
   stk->hash = hash;
 
-  if (!stk->info.name)
+  if (!isPointerCorrect(stk->info.name))
     error |= NOT_NAME;
 
-  if (!stk->info.fileName)
+  if (!isPointerCorrect(stk->info.fileName))
     error |= NOT_FILE_NAME;
 
-  if (!stk->info.functionName)
+  if (!isPointerCorrect(stk->info.functionName))
     error |= NOT_FUNCTION_NAME;
 
   if (stk->info.line <= 0)
     error |= INCORRECT_LINE;
 
-#endif
-
   return error;
+
+#endif
 }
 
 void do_stack_init(Stack *stk, size_t capacity, void (*copyFunction)(Element *, const Element *),
                   const char *name, const char *fileName, const char *functionName, int line,
                   unsigned *error)
 {
-    assert(stk);
-    assert(copyFunction);
-    assert(name);
-    assert(fileName);
-    assert(functionName);
-    assert(line > 0);
+  if (!isPointerCorrect(stk) || !isPointerCorrect((void *)copyFunction) || !isPointerCorrect(name) || !isPointerCorrect(fileName) || !isPointerCorrect(functionName) || (line <= 0) || (stk->status & INIT))
+      {
+        if (isPointerCorrect(error))
+            *error = 1;
 
-    assert(!(stk->status & INIT));
+        return;
+      }
 
 #ifndef RELEASE_BUILD_
 
@@ -173,7 +169,7 @@ void do_stack_init(Stack *stk, size_t capacity, void (*copyFunction)(Element *, 
         stk->array = (Element *) calloc(1, capacity*sizeof(Element));
 
 #endif
-        if (stk->array == nullptr)
+        if (!isPointerCorrect(stk->array))
           {
             if (isPointerCorrect(error))
               *error = 1;
@@ -201,7 +197,13 @@ void stack_destroy(Stack *stk, unsigned *error)
 {
   CHECK_VALID(stk, error);
 
-  assert(stk->status & INIT);
+  if (!(stk->status & INIT))
+    {
+      if (isPointerCorrect(error))
+        *error = 1;
+
+      return;
+    }
 
 #ifndef RELEASE_BUILD_
 
@@ -228,17 +230,20 @@ void stack_push(Stack *stk, const Element *element, unsigned *error)
 {
   CHECK_VALID(stk, error);
 
-  assert(element != nullptr);
+  if (!isPointerCorrect(element))
+  {
+    if (isPointerCorrect(error))
+      *error = 1;
+
+    return;
+  }
 
   if (stk->lastElementIndex == stk->capacity)
     {
       stack_resize(stk, stk->capacity * DEFAULT_STACK_GROWTH);
 
-      if (stk->array == nullptr)
+      if (!isPointerCorrect(stk->array))
         {
-          stk->capacity         = 0;
-          stk->lastElementIndex = 0;
-
           if (isPointerCorrect(error))
             *error = 1;
 
@@ -259,15 +264,13 @@ void stack_pop(Stack *stk, Element *element, unsigned *error)
 {
   CHECK_VALID(stk, error);
 
-  assert(element != nullptr);
+  if (!isPointerCorrect(element) || (stk->status & EMPTY))
+  {
+    if (isPointerCorrect(error))
+      *error = 1;
 
-  if (stk->status & EMPTY)
-    {
-      if (isPointerCorrect(error))
-        *error = 1;
-
-      return;
-    }
+    return;
+  }
 
   stk->copyFunction(element, &stk->array[--(stk->lastElementIndex)]);
 
@@ -280,11 +283,8 @@ void stack_pop(Stack *stk, Element *element, unsigned *error)
     {
       stack_resize(stk, stk->capacity / DEFAULT_STACK_GROWTH);
 
-      if (stk->array == nullptr)
+      if (!isPointerCorrect(stk->array))
         {
-          stk->capacity         = 0;
-          stk->lastElementIndex = 0;
-
           if (isPointerCorrect(error))
             *error = 1;
 
@@ -315,7 +315,7 @@ void stack_resize(Stack *stk, size_t newSize, unsigned *error)
 
 #endif
 
-      if (stk->array != nullptr)
+      if (isPointerCorrect(stk->array))
         {
 #ifndef RELEASE_BUILD_
 

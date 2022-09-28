@@ -21,7 +21,7 @@ enum Colors {
 };
 
 enum FontStyle {
-  NORMAL          ,
+  NORMAL          , // Reset style and color
   BOLD            ,
   FAINT           ,
   ITALIC          ,
@@ -31,12 +31,22 @@ enum FontStyle {
   DOUBLY_UNDERLINE,
 };
 
+const int COLORS_COUNT = 15;
+const int STYLES_COUNT =  8;
+
+/// Set foreground color
+/// @param [in] color Code of color
 void setForegroundColor(int color);
 
+/// Set background color
+/// @param [in] color Code of color
 void setBackgroundColor(int color);
 
+/// Set font style
+/// @param [in] style Code of style
 void setFontStyle(int style);
 
+/// Set consol output to default
 void resetConsole();
 
 #endif

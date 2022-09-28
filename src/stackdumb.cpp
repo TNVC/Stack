@@ -2,7 +2,6 @@
 #include "stack.h"
 #include "elementfunctions.h"
 #include "systemlike.h"
-#include "asserts.h"
 
 #define STATUS_BORDER "#---------------------------#------#"
 #define ERRORS_BORDER "#----------------------------------#"
@@ -17,23 +16,23 @@ const int PAUSE_LENGTH  = 6;
 int MAX_LENGTH    = 0;
 int MIDDLE_LENGTH = 0;
 
-const char *ERRORS_MESSAGE[] = {
-  "Pointer to stack is NULL",		// 0
-  "Stack was destroy without init",	// 1
-  "Status is incorrect",		// 2
-  "Pointer to stack`s array is NULL",	// 3
-  "Capacity less than size",		// 4
-  "Stack hasn`t a copyFunction",
-  "Left canary is died",
-  "Right canary is died",
-  "Left array canary is died",
-  "Right array canary is died",
-  "Stack hasn`t a name",
-  "Stack hasn`t a file name",
-  "Stack hasn`t a function name",
-  "Stack hasn`t a correct line",
-  "Stack hash is corrupted",
-  "Stack`s array hash is corrupted"
+const char *ERRORS_MESSAGE[] = {      // errCode - errName
+  "Pointer to stack is NULL",	    	  // 2^0     - NULL_STACK_POINTER
+  "Stack was destroy without init",	  // 2^1     - DESTROY_WITHOUT_INIT
+  "Status is incorrect",	          	// 2^2     - INCORRECT_STATUS
+  "Pointer to stack`s array is NULL",	// 2^3     - NULL_ARRAY_POINTER
+  "Capacity less than size",		      // 2^4     - CAPACITY_LESS_THAN_SIZE
+  "Stack hasn`t a copyFunction",      // 2^5     - NOT_COPYFUNCTION
+  "Left canary is died",              // 2^6     - LEFT_CANARY_DIED
+  "Right canary is died",             // 2^7     - RIGHT_CANARY_DIED
+  "Left array canary is died",        // 2^8     - LEFT_ARRAY_CANARY_DIED
+  "Right array canary is died",       // 2^9     - RIGHT_ARRAY_CANARY_DIED
+  "Stack hasn`t a name",              // 2^10    - NOT_NAME
+  "Stack hasn`t a file name",         // 2^11    - NOT_FILE_NAME
+  "Stack hasn`t a function name",     // 2^12    - NOT_FUNCTION_NAME
+  "Stack hasn`t a correct line",      // 2^13    - INCORRECT_LINE
+  "Stack hash is corrupted",          // 2^14    - DIFFERENT_HASH
+  "Stack`s array hash is corrupted"   // 2^15    - DIFFERENT_ARRAY_HASH
 };
 
 const char *STATUS_NAME[] = {
@@ -84,27 +83,28 @@ void do_stack_dump(const Stack *stk, unsigned errorCode, FILE *filePtr,
 {
 #ifndef RELEASE_BUILD_
 
-  assert(filePtr);
-  assert(fileName);
-  assert(functionName);
-  assert(line);
+  if (!isPointerCorrect(filePtr))
+    filePtr = stdout;
 
   fputc('\n', filePtr);
 
-  fprintf(filePtr, "%s at %s (%d):\n", functionName, fileName, line);
+  fprintf(filePtr, "%s at %s (%d):\n",
+          isPointerCorrect(functionName) ? functionName : "nullptr",
+          isPointerCorrect(fileName)     ? fileName     : "nullptr",
+          line);
   fprintf(filePtr, "Stack[%p]", stk);
 
-  if (stk)
+  if (isPointerCorrect(stk))
     fprintf(filePtr, " \"%s\" at %s at %s (%d)",
-            stk->info.name         ? stk->info.name         : "nullptr",
-            stk->info.functionName ? stk->info.functionName : "nullptr",
-            stk->info.fileName     ? stk->info.fileName     : "nullptr",
+            isPointerCorrect(stk->info.name)         ? stk->info.name         : "nullptr",
+            isPointerCorrect(stk->info.functionName) ? stk->info.functionName : "nullptr",
+            isPointerCorrect(stk->info.fileName)     ? stk->info.fileName     : "nullptr",
             stk->info.line);
 
-  if (stk)
+  if (isPointerCorrect(stk))
     fprintf(filePtr, "\nHash: %u Array hash: %u", stk->hash, stk->arrayHash);
 
-  if (stk && isPointerCorrect(stk->array))
+  if (isPointerCorrect(stk) && isPointerCorrect(stk->array))
     {
       MAX_LENGTH    = maxElementLength(&stk->array[0]);
 
@@ -117,7 +117,7 @@ void do_stack_dump(const Stack *stk, unsigned errorCode, FILE *filePtr,
 
   printStatus (stk, filePtr);
 
-  if (!stk)
+  if (!isPointerCorrect(stk))
     {
       fputc('\n', filePtr);
 

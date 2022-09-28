@@ -1,7 +1,7 @@
 #ifndef HASH_H_
 #define HASH_H_
 
-#include <stdlib.h>
+#include <stddef.h>
 
 /// Calc hash for data
 /// @param [in] data Data which need hash

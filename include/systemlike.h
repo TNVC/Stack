@@ -20,4 +20,9 @@ int isPointerCorrect(const void *pointer);
 /// @return Size of file with name filename
 size_t getFileSize(const char *filename);
 
+/// Chech then file exits
+/// @param [in] fileName Name of file for check
+/// @return If file exits 1 else 0
+int isFileExists(const char *fileName);
+
 #endif

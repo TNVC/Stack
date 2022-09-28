@@ -1,8 +1,8 @@
-#if not defined ASSERTS_H && not defined RELEASE_BUILD__
+#if not defined ASSERTS_H && not defined RELEASE_BUILD_
 #define ASSERTS_H_
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <stddef.h>
 
 #define assert(EXPRESSION)                                              \
   do                                                                    \

@@ -3,7 +3,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include "asserts.h"
 #include "systemlike.h"
 
 void *recalloc(void *pointer, size_t elements, size_t elementSize)
@@ -26,13 +25,27 @@ int isPointerCorrect(const void *pointer)
   return write(1, pointer, 0) != -1;
 }
 
-size_t getFileSize(const char *filename)
+size_t getFileSize(const char *fileName)
 {
-  assert(filename != nullptr);
+  if (!isPointerCorrect(fileName))
+    return 0;
 
   struct stat temp = {};
 
-  stat(filename, &temp);
+  stat(fileName, &temp);
 
   return (size_t)temp.st_size;
+}
+
+int isFileExists(const char *fileName)
+{
+  if (!isPointerCorrect(fileName))
+    return 0;
+
+  struct stat temp = {};
+
+  if (stat(fileName, &temp) == -1)
+    return 1;
+
+  return 0;
 }

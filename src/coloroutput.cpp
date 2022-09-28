@@ -4,58 +4,58 @@
 #pragma GCC diagnostic ignored "-Wformat-security"
 
 const char *FOREGROUND_COLOR_CODES[] = {
-    "\033[30m",
-    "\033[31m",
-    "\033[32m",
-    "\033[33m",
-    "\033[34m",
-    "\033[35m",
-    "\033[36m",
-    "\033[37m",
-    "\033[90m",
-    "\033[91m",
-    "\033[92m",
-    "\033[93m",
-    "\033[94m",
-    "\033[95m",
-    "\033[96m",
-    "\033[97m",
+  "\033[30m", // BLACK
+  "\033[31m", // RED
+  "\033[32m", // GREEN
+  "\033[33m", // YELLOW
+  "\033[34m", // BLUE
+  "\033[35m", // MAGENTA
+  "\033[36m", // CYAN
+  "\033[37m", // WHITE
+  "\033[90m", // BRIGHT_BLACK
+  "\033[91m", // BRIGHT_RED
+  "\033[92m", // BRIGHT_GREEN
+  "\033[93m", // BRIGHT_YELLOW
+  "\033[94m", // BRIGHT_BLUE
+  "\033[95m", // BRIGHT_MAGENTA
+  "\033[96m", // BRIGHT_CYAN
+  "\033[97m", // BRIGHT_WHITE
 };
 
 const char *BACKGROUND_COLOR_CODES[] = {
-  "\033[40m" ,
-  "\033[41m" ,
-  "\033[42m" ,
-  "\033[43m" ,
-  "\033[44m" ,
-  "\033[45m" ,
-  "\033[46m" ,
-  "\033[47m" ,
-  "\033[100m",
-  "\033[101m",
-  "\033[102m",
-  "\033[103m",
-  "\033[104m",
-  "\033[105m",
-  "\033[106m",
-  "\033[107m",
+  "\033[40m" , // BLACK
+  "\033[41m" , // RED
+  "\033[42m" , // GREEN
+  "\033[43m" , // YELLOW
+  "\033[44m" , // BLUE
+  "\033[45m" , // MAGENTA
+  "\033[46m" , // CYAN
+  "\033[47m" , // WHITE
+  "\033[100m", // BRIGHT_BLACK
+  "\033[101m", // BRIGHT_RED
+  "\033[102m", // BRIGHT_GREEN
+  "\033[103m", // BRIGHT_YELLOW
+  "\033[104m", // BRIGHT_BLUE
+  "\033[105m", // BRIGHT_MAGENTA
+  "\033[106m", // BRIGHT_CYAN
+  "\033[107m", // BRIGHT_WHITE
 };
 
 
 const char *FONT_STYLE_CODES[] = {
-  "\033[0m" ,
-  "\033[1m" ,
-  "\033[2m" ,
-  "\033[3m" ,
-  "\033[4m" ,
-  "\033[5m" ,
-  "\033[7m" ,
-  "\033[21m",
+  "\033[0m" , // NORMAL
+  "\033[1m" , // BOLD
+  "\033[2m" , // FAINT
+  "\033[3m" , // ITALIC
+  "\033[4m" , // UNDERLINE
+  "\033[5m" , // BLINK
+  "\033[7m" , // INVERT_COLORS
+  "\033[21m", // DOUBLY_UNDERLINE
 };
 
 void setForegroundColor(int color)
 {
-  if (color < 0 || color > 15)
+  if (color < 0 || color > COLORS_COUNT)
     return;
 
   printf(FOREGROUND_COLOR_CODES[color]);
@@ -63,7 +63,7 @@ void setForegroundColor(int color)
 
 void setBackgroundColor(int color)
 {
-  if (color < 0 || color > 15)
+  if (color < 0 || color > COLORS_COUNT)
     return;
 
   printf(BACKGROUND_COLOR_CODES[color]);
@@ -71,7 +71,7 @@ void setBackgroundColor(int color)
 
 void setFontStyle(int style)
 {
-  if (style < 0 || style > 8)
+  if (style < 0 || style > STYLES_COUNT)
     return;
 
   printf(FONT_STYLE_CODES[style]);

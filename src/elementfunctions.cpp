@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "systemlike.h"
 #include "asserts.h"
 #include "elementfunctions.h"
 
@@ -6,13 +7,17 @@
 
 int printElement(const int *element, FILE *filePtr)
 {
-  assert(element);
+  if (!isPointerCorrect(element) || !isPointerCorrect(filePtr))
+    return -1;
 
   return fprintf(filePtr, "%d", *element);
 }
 
 int elementLength(const int *element)
 {
+  if (!isPointerCorrect(element))
+    return -1;
+
   int value = *element;
 
   int charsNum = !(value > 0);
@@ -40,5 +45,8 @@ int getPoison(const int *element)
 
 int isPoison(const int *element)
 {
+  if (!isPointerCorrect(element))
+    return 0;
+
   return (int)0xDED00DED == *element;
 }
