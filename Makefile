@@ -18,7 +18,7 @@ DEPENDENCES := $(patsubst %.cpp, $(if $(DEPDIR), $(DEPDIR)/%.d, ./%.d), $(notdir
 
 VPATH := $(SRCDIR)
 
-.PHONY: clean run  dependences cleanDependences makeDependencesDir objects print
+.PHONY: clean run  dependences cleanDependences makeDependencesDir objects
 
 $(NAME):  dependences objects $(OBJECTS) cleanDependences
 	@$(if $(OBJECTS), $(CC) $(LFLAGS) $(OBJECTS) -o $@ 2>$(LOGFILE))

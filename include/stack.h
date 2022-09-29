@@ -36,12 +36,12 @@ typedef struct {
 
   DebugInfo info;
 
-  unsigned hash;
-  unsigned arrayHash;
+  mutable unsigned hash;
+  mutable unsigned arrayHash;
 
   CANARY rightCanary;
 
-#enif
+#endif
 } Stack;
 
 /// Codes of stack status
@@ -89,8 +89,8 @@ extern DUMP_LEVEL DUMP_LVL;
 /// @return Code of error
 unsigned stack_valid(const Stack *stk);
 
-#define stack_init(stk, capacity, copyFunction, ...)          \
-  do_stack_init(stk, capacity, copyFunction, INIT_INFO(stk) ERROR(, __VA_ARGS__))
+#define stack_init(stk, capacity, copyFunction)          \
+  do_stack_init(stk, capacity, copyFunction, INIT_INFO(stk))
 
 /// Init Stack
 /// @param [in/out] stk Pointer to stack for init
