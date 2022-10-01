@@ -23,14 +23,6 @@ unsigned enum LogLevel {
   VALUE   = (0x01 << 4),
 };
 
-/// Init logs
-/// @note Autocallable
-unsigned initLog();
-
-/// Destroy logs
-/// @note Autocallable
-void destroyLog();
-
 /// Getter for LOG_FILE
 /// @return LOG_FILE or NULL if fail to open file
 /// @note If log file bigger than 1GB close it and open new file and save descriptor in LOG_FILE\n
@@ -40,16 +32,16 @@ FILE *getLogFile();
 #ifndef RELEASE_BUILD_
 
 #define logValue(value)                                     \
-  loggingPrint(value      , LOG_INFO(value)     , VALUE)
+  loggingPrint(VALUE   , value      , LOG_INFO(value))
 
 #define logMessage(message)                                 \
-  loggingPrint(message    , LOG_INFO(message)   , MESSAGE)
+  loggingPrint(MESSAGE , message    , LOG_INFO(message))
 
 #define logWarning(warning)                                 \
-  logggingPrint(#warning  , LOG_INFO(warning)   , WARNING)
+  logggingPrint(WARNING, #warning   , LOG_INFO(warning))
 
 #define logError(expression)                                \
-  loggingPrint(#expression, LOG_INFO(expression), ERROR)
+  loggingPrint(ERROR   , #expression, LOG_INFO(expression))
 
 #else
 
@@ -64,62 +56,64 @@ FILE *getLogFile();
 #endif
 
 #define logFatal(expression)                              \
-  loggingPrint(#expression, LOG_INFO(expression), FATAL)
+  loggingPrint(FATAL, #expression, LOG_INFO(expression))
 
 
 /// Print log info for decimal
+/// @param [in] level Level of current log`s print
 /// @param [in] value Deciamal value
 /// @param [in] name C-like string with value
 /// @param [in] fileName Name of file where was call function
 /// @param [in] functionName Name of function wher was call function
 /// @param [in] line Number of line where was call function
-/// @param [in] level Level of current log`s print
 /// @return Count of print chars
-int loggingPrint(long long value, const char *name,
-                 const char *fileName, const char *functionName, int line, unsigned level);
+int loggingPrint(unsigned level, long long value, const char *name,
+                 const char *fileName, const char *functionName, int line);
 
 /// Print log info for double
+/// @param [in] level Level of current log`s print
 /// @param [in] value Double value
 /// @param [in] name C-like string with value
 /// @param [in] fileName Name of file where was call function
 /// @param [in] functionName Name of function wher was call function
 /// @param [in] line Number of line where was call function
-/// @param [in] level Level of current log`s print
 /// @return Count of print chars
-int loggingPrint(double value, const char *name,
-                 const char *fileName, const char *functionName, int line, unsigned level);
+int loggingPrint(unsigned level, double value, const char *name,
+                 const char *fileName, const char *functionName, int line);
 
 /// Print log info for char
+/// @param [in] level Level of current log`s print
 /// @param [in] value Char value
 /// @param [in] name C-like string with value
 /// @param [in] fileName Name of file where was call function
 /// @param [in] functionName Name of function wher was call function
 /// @param [in] line Number of line where was call function
-/// @param [in] level Level of current log`s print
 /// @return Count of print chars
-int loggingPrint(char value, const char *name,
-                 const char *fileName, const char *functionName, int line, unsigned level);
+int loggingPrint(unsigned level, char value, const char *name,
+                 const char *fileName, const char *functionName, int line);
 
 /// Print log info for pointer
+/// @param [in] level Level of current log`s print
 /// @param [in] value Pointer value
 /// @param [in] name C-like string with value
 /// @param [in] fileName Name of file where was call function
 /// @param [in] functionName Name of function wher was call function
 /// @param [in] line Number of line where was call function
-/// @param [in] level Level of current log`s print
 /// @return Count of print chars
-int loggingPrint(const void *value,const char *name,
-                 const char *fileName, const char *functionName, int line, unsigned level);
+int loggingPrint(unsigned level, const void *value,const char *name,
+                 const char *fileName, const char *functionName, int line);
 
 /// Print log info for C-like string
+/// @param [in] level Level of current log`s print
 /// @param [in] value C-like string value
 /// @param [in] name C-like string with value
 /// @param [in] fileName Name of file where was call function
 /// @param [in] functionName Name of function wher was call function
 /// @param [in] line Number of line where was call function
-/// @param [in] level Level of current log`s print
 /// @return Count of print chars
-int loggingPrint(const char *value, const char *name,
-                 const char *fileName, const char *functionName, int line, unsigned level);
+int loggingPrint(unsigned level, const char *value, const char *name,
+                 const char *fileName, const char *functionName, int line);
+
+#undef LOG_INFO
 
 #endif

@@ -11,19 +11,32 @@ void copyInt(int *target, const int *source);
 
 int main()
 {
-  startConsoleWaiting();
+  //startConsoleWaiting();
 
   FILE *file = getLogFile();
 
   Stack stack = {};
 
-  DUMP_LVL = DUMP_NOT_EMPTY;
+  DUMP_LVL = DUMP_ALL;
 
   stack_dump(&stack, stack_valid(&stack), file);
 
-  stack_init(&stack, 2, copyInt);
+  stack_init(&stack, 4, copyInt);
 
   stack_dump(&stack, stack_valid(&stack), file);
+
+  for (int i = 0; i < 10; ++i)
+    {
+      int temp = (int) (((double)rand())/RAND_MAX * 200000);
+
+      stack_push(&stack, &temp);
+
+      stack_dump(&stack, stack_valid(&stack), file);
+
+      stack_pop(&stack, &temp);
+
+      stack_dump(&stack, stack_valid(&stack), file);
+    }
 
   for (int i = 0; i < 21; ++i)
     {
@@ -58,12 +71,12 @@ int main()
 
   clock_t now = clock();
 
-  clock_t wait = 10 * CLOCKS_PER_SEC;
+  clock_t wait = 0 * CLOCKS_PER_SEC;
 
   while (clock() - now < wait)
     continue;
 
-  stopConsoleWaiting();
+  //stopConsoleWaiting();
 
   return 0;
 }

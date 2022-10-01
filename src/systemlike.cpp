@@ -11,7 +11,7 @@ void *recalloc(void *pointer, size_t elements, size_t elementSize)
 
   void *newPointer = realloc(pointer, elements * elementSize);
 
-  if (newPointer && oldSize < elements * elementSize)
+  if (isPointerCorrect(newPointer) && oldSize < elements * elementSize)
    memset((char *)newPointer + oldSize, 0, elements*elementSize - oldSize);
 
   return newPointer;

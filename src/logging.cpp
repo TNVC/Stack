@@ -47,6 +47,14 @@
       fprintf(LOG_FILE, SEPARATOR SEPARATOR "\n");              \
     } while(0)
 
+/// Init logs
+/// @note Autocallable
+static unsigned initLog();
+
+/// Destroy logs
+/// @note Autocallable
+static void destroyLog();
+
 /// Try to open new file with name from getNewLogFileName() 
 /// @return Was file open
 /// @note Don`t auto close files
@@ -68,7 +76,7 @@ static char    *LOG_FILE_NAME     = nullptr;
 
 static size_t   MAX_LOG_FILE_SIZE = 1024 * 1024 * 256;
 
-unsigned initLog()
+static unsigned initLog()
 {
   if (!isFileExists(LOG_DIRECTORY))
     mkdir(LOG_DIRECTORY, 0777);
@@ -109,7 +117,7 @@ unsigned initLog()
   return level;
 }
 
-void destroyLog()
+static void destroyLog()
 {
   if (isPointerCorrect(LOG_FILE))
     {
@@ -192,8 +200,8 @@ char *getNewLogFileName()
   return newLogFileName;
 }
 
-int loggingPrint(long long value, const char *name,
-                 const char *fileName, const char *functionName, int line, unsigned level)
+int loggingPrint(unsigned level, long long value, const char *name,
+                 const char *fileName, const char *functionName, int line)
 {
 #ifdef RELEASE_BUILD_
 
@@ -240,8 +248,8 @@ int loggingPrint(long long value, const char *name,
     }
 }
 
-int loggingPrint(double value, const char *name,
-                 const char *fileName, const char *functionName, int line, unsigned level)
+int loggingPrint(unsigned level, double value, const char *name,
+                 const char *fileName, const char *functionName, int line)
 {
 #ifdef RELEASE_BUILD_
 
@@ -287,8 +295,8 @@ int loggingPrint(double value, const char *name,
     }
 }
 
-int loggingPrint(char value, const char *name,
-                 const char *fileName, const char *functionName, int line, unsigned level)
+int loggingPrint(unsigned level, char value, const char *name,
+                 const char *fileName, const char *functionName, int line)
 {
 #ifdef RELEASE_BUILD_
 
@@ -335,8 +343,8 @@ int loggingPrint(char value, const char *name,
     }
 }
 
-int loggingPrint(const void *value, const char *name,
-                 const char *fileName, const char *functionName, int line, unsigned level)
+int loggingPrint(unsigned level, const void *value, const char *name,
+                 const char *fileName, const char *functionName, int line)
 {
 #ifdef RELEASE_BUILD_
 
@@ -382,8 +390,8 @@ int loggingPrint(const void *value, const char *name,
     }
 }
 
-int loggingPrint(const char *value, const char *name,
-                 const char *fileName, const char *functionName, int line, unsigned level)
+int loggingPrint(unsigned level, const char *value, const char *name,
+                 const char *fileName, const char *functionName, int line)
 {
   if (!isPointerCorrect(value))
     value        = "nullptr";

@@ -2,21 +2,17 @@
 #include "systemlike.h"
 #include "hash.h"
 
+const int DEFAULT_HASH_OFFSET = 17;
+
 unsigned getHash(const void *data, size_t size)
 {
   if (!isPointerCorrect(data))
     return 0;
 
-  int hash = 0;
+  int hash = DEFAULT_HASH_OFFSET;
 
-  int temp = 0;
-
-  for (size_t i = 0; i < size; ++i)
-    {
-      temp = *((const char *)data + i);
-
-      hash += 17 + (temp << 5) + temp;
-    }
+  for (const char *ptr = (const char *)data; ptr != (const char *)data + size; ++ptr)
+    hash += (hash << 5) + hash + *ptr;
 
   return (unsigned)hash;
 }

@@ -6,6 +6,7 @@
 #include "logging.h"
 
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wconditionally-supported"
 
 #ifndef RELEASE_BUILD_
 
@@ -48,8 +49,16 @@
 #define LEFT_ARRAY_CANARY  0xBEADFACE
 #define RIGHT_ARRAY_CANARY 0xABADBABE
 
-const size_t DEFAULT_STACK_GROWTH = 2;
-const size_t DEFAULT_STACK_OFFSET = 5;
+const size_t DEFAULT_STACK_GROWTH   =  2;
+const size_t DEFAULT_STACK_OFFSET   =  5;
+const size_t DEFAULT_STACK_CAPACITY = 10;
+
+/// Create array for stack if previously stack capacity was 0
+/// @param [in] stk Pointer to stack
+/// @param [in] size Size for array
+/// @param [out] error Variable for write errors` codes
+/// @note If size equals zero, that set stack`s array to nullptr
+static void createArray(Stack *stk, size_t size, unsigned *error);
 
 
 unsigned stack_valid(const Stack *stk)
@@ -86,7 +95,7 @@ unsigned stack_valid(const Stack *stk)
   if (stk->rightCanary != RIGHT_CANARY)
     error |= RIGHT_CANARY_DIED;
 
-  if (stk->array)
+  if (isPointerCorrect(stk->array))
     {
       if (*(CANARY *)((char *)stk->array - sizeof(CANARY)) != LEFT_ARRAY_CANARY)
         error |= LEFT_ARRAY_CANARY_DIED;
@@ -161,31 +170,10 @@ void do_stack_init(Stack *stk, size_t capacity, void (*copyFunction)(Element *, 
         stk->array = nullptr;
     else
       {
-#ifndef RELEASE_BUILD_
+        createArray(stk, capacity, error);
 
-        stk->array = (Element *) calloc(1, capacity*sizeof(Element) + 2*sizeof(CANARY));
-#else
-
-        stk->array = (Element *) calloc(1, capacity*sizeof(Element));
-
-#endif
         if (!isPointerCorrect(stk->array))
-          {
-            if (isPointerCorrect(error))
-              *error = 1;
-
-            return;
-          }
-
-#ifndef RELEASE_BUILD_
-
-        *(CANARY *)stk->array = LEFT_ARRAY_CANARY;
-
-        stk->array = (Element *)((char *)stk->array + sizeof(CANARY));
-
-        *(CANARY *)(stk->array + capacity) = RIGHT_ARRAY_CANARY;
-
-#endif
+          return;
       }
 
     UPDATE_HASH(stk);
@@ -207,7 +195,8 @@ void stack_destroy(Stack *stk, unsigned *error)
 
 #ifndef RELEASE_BUILD_
 
-  free((char *)stk->array - sizeof(CANARY));
+  if (isPointerCorrect(stk->array))
+    free((char *)stk->array - sizeof(CANARY));
 
 #else
 
@@ -240,7 +229,7 @@ void stack_push(Stack *stk, const Element *element, unsigned *error)
 
   if (stk->lastElementIndex == stk->capacity)
     {
-      stack_resize(stk, stk->capacity * DEFAULT_STACK_GROWTH);
+      stack_resize(stk, stk->capacity ? stk->capacity * DEFAULT_STACK_GROWTH : DEFAULT_STACK_CAPACITY);
 
       if (!isPointerCorrect(stk->array))
         {
@@ -274,6 +263,10 @@ void stack_pop(Stack *stk, Element *element, unsigned *error)
 
   stk->copyFunction(element, &stk->array[--(stk->lastElementIndex)]);
 
+  Element poison = getPoison(&stk->array[0]);
+
+  stk->copyFunction(&stk->array[stk->lastElementIndex], &poison);
+
   if (stk->lastElementIndex == 0)
     stk->status |= EMPTY;
 
@@ -301,23 +294,37 @@ void stack_resize(Stack *stk, size_t newSize, unsigned *error)
 {
   CHECK_VALID(stk, error);
 
+  if (newSize && !stk->array)
+    {
+      createArray(stk, newSize, error);
+
+      if (!isPointerCorrect(stk->array))
+        return;
+
+      Element poison = getPoison(&stk->array[0]);
+
+      for (size_t i = 0; i < newSize; ++i)
+        stk->copyFunction(&stk->array[i], &poison);
+    }
   if (newSize)
     {
 #ifndef RELEASE_BUILD_
 
       stk->array = (Element *)((char *)stk->array - sizeof(CANARY));
 
-      stk->array = (Element *) recalloc(stk->array, 1,  newSize*sizeof(Element) + 2*sizeof(CANARY));
+      Element *temp = (Element *) recalloc(stk->array, 1,  newSize*sizeof(Element) + 2*sizeof(CANARY));
 
 #else
 
-      stk->array = (Element *) recalloc(stk->array, 1, newSize*sizeof(Element));
+      Element *temp = (Element *) recalloc(stk->array, 1,  newSize*sizeof(Element));
 
 #endif
 
-      if (isPointerCorrect(stk->array))
+      if (isPointerCorrect(temp))
         {
 #ifndef RELEASE_BUILD_
+
+          stk->array = temp;
 
           stk->array = (Element *)((char *)stk->array + sizeof(CANARY));
 
@@ -327,10 +334,9 @@ void stack_resize(Stack *stk, size_t newSize, unsigned *error)
             {
               Element poison = getPoison(&stk->array[0]);
 
-              for (size_t i = newSize - stk->capacity; i < newSize; ++ i)
-                stk->copyFunction(&stk->array[i], &poison);
+              for (size_t i = 0; i < newSize - stk->capacity; ++ i)
+                stk->copyFunction(&stk->array[stk->capacity + i], &poison);
             }
-
 #endif
         }
       else
@@ -384,4 +390,47 @@ int stack_isEmpty(const Stack *stk, unsigned *error)
   CHECK_VALID(stk, error, 0);
 
   return stk->status & EMPTY;
+}
+
+static void createArray(Stack *stk, size_t size, unsigned *error)
+{
+  if (!size)
+    {
+      stk->array = nullptr;
+
+      return;
+    }
+
+#ifndef RELEASE_BUILD_
+
+  stk->array = (Element *) calloc(1, size*sizeof(Element) + 2*sizeof(CANARY));
+
+#else
+
+  stk->array = (Element *) calloc(1, size*sizeof(Element));
+
+#endif
+
+  if (!isPointerCorrect(stk->array))
+    {
+      if (isPointerCorrect(error))
+        *error = 1;
+
+      return;
+    }
+
+#ifndef RELEASE_BUILD_
+
+  *(CANARY *)stk->array = LEFT_ARRAY_CANARY;
+
+  stk->array = (Element *)((char *)stk->array + sizeof(CANARY));
+
+  *(CANARY *)(stk->array + size) = RIGHT_ARRAY_CANARY;
+
+#endif
+
+  Element poison = getPoison(&stk->array[0]);
+
+  for (size_t i = 0; i < size; ++i)
+    stk->copyFunction(&stk->array[i], &poison);
 }
